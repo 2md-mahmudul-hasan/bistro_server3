@@ -4,7 +4,7 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 require('dotenv').config()
-
+const jwt = require('jsonwebtoken');
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.bik86wn.mongodb.net/?retryWrites=true&w=majority`;
@@ -33,6 +33,12 @@ async function run() {
 app.get('/users', async(req, res)=>{
   const result = await usersCollections.find().toArray()
   res.send(result)
+})
+//jwt
+app.post('/jwt', (req, res)=>{
+   const user = req.body;
+   const token = jwt.sign(user, process.env.TOKEN_SECRET,{ expiresIn: '1h' } )
+   res.send(token)
 })
 app.post('/users', async(req, res)=>{
   const user = req.body;
