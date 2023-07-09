@@ -1,11 +1,28 @@
 const express = require('express')
 const cors = require('cors')
 const app = express()
-app.use(cors())
-app.use(express.json())
+
 require('dotenv').config()
 const jwt = require('jsonwebtoken');
 
+
+app.use(cors())
+app.use(express.json())
+
+const veryfyJwt=(req, res, next)=>{
+const authorization = req.headers.authorization;
+if(!authorization){
+  res.status(401).send({error:true, message:'user not valid'})
+}
+const token = authorization.split(' ')[1];
+jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded)=>{
+  if(err){
+    res.status(401).send({error:true, message:'user not valid'})
+  }
+  req.decoded = decoded;
+  next()
+})
+}
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.bik86wn.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -38,7 +55,7 @@ app.get('/users', async(req, res)=>{
 app.post('/jwt', (req, res)=>{
    const user = req.body;
    const token = jwt.sign(user, process.env.TOKEN_SECRET,{ expiresIn: '1h' } )
-   res.send(token)
+   res.send({token})
 })
 app.post('/users', async(req, res)=>{
   const user = req.body;
@@ -76,10 +93,14 @@ app.post('/users', async(req, res)=>{
     })
 
 
-    app.get('/carts', async(req, res)=>{
+    app.get('/carts', veryfyJwt, async(req, res)=>{
       const email = req.query.email;
       if(!email){
         res.send([])
+      }
+      const decodedEmail = req.decoded.email;
+      if(email !==decodedEmail){
+        res.status(403).send({error:true, message:'forbidden access'})
       }
       const query = {email:email}
       const result = await cartCollections.find(query).toArray()
